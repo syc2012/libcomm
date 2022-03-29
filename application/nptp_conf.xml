@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<NPTP>
+    <MAPPING enable="1">
+        <PORT>9001</PORT>
+        <PIPE>/home/work/VMware/vm_lkk/serial_lkk.sock</PIPE>
+        <DESC>VM LKK</DESC>
+    </MAPPING>
+    <MAPPING enable="1">
+        <PORT>9002</PORT>
+        <PIPE>/home/work/VMware/vm_dag/serial_dag.sock</PIPE>
+        <DESC>VM DAG</DESC>
+    </MAPPING>
+    <MAPPING enable="0">
+        <PORT>9003</PORT>
+        <PIPE>/home/work/VMware/vm_test/serial_test.sock</PIPE>
+        <DESC>VM Test</DESC>
+    </MAPPING>
+</NPTP>

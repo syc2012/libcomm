@@ -1,0 +1,11 @@
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(pwd)/lib
+CROSS=
+
+echo "BUILD_DIR = $(pwd)"         >  build.include
+echo "CROSS = $CROSS"             >> build.include
+echo "CC = \$(CROSS)gcc"          >> build.include
+echo "AR = \$(CROSS)ar"           >> build.include
+echo "STRIP = \$(CROSS)strip"     >> build.include
+echo "OBJDUMP = \$(CROSS)objdump" >> build.include
+echo                              >> build.include
+cat build.include
