@@ -78,7 +78,7 @@ static void _udpIpv4UninitSocket(tUdpIpv4Context *pContext)
 *  Thread function for the IPv4 UDP socket receiving.
 *  @param [in]  pArg  A @ref tUdpIpv4Context object.
 */
-static void *_udpIpv4SockRecvTask(void *pArg)
+static void *_udpIpv4RecvTask(void *pArg)
 {
     tUdpIpv4Context *pContext = pArg;
     struct sockaddr_in recvAddr;
@@ -122,12 +122,15 @@ static void *_udpIpv4SockRecvTask(void *pArg)
         );
         LOG_DUMP("IPv4 UDP recv", pContext->recvMsg, len);
 
-        pContext->pRecvFunc(
-            pContext->pArg,
-            pContext->recvMsg,
-            len,
-            (struct sockaddr *)&recvAddr
-        );
+        if ( pContext->pRecvFunc )
+        {
+            pContext->pRecvFunc(
+                pContext->pArg,
+                pContext->recvMsg,
+                len,
+                (struct sockaddr *)&recvAddr
+            );
+        }
     }
 
     LOG_2("stop the thread: %s\n", __func__);
@@ -187,7 +190,7 @@ tUdpIpv4Handle comm_udpIpv4Init(
     error = pthread_create(
                 &(pContext->thread),
                 NULL,
-                _udpIpv4SockRecvTask,
+                _udpIpv4RecvTask,
                 pContext
             );
     if (error != 0)
@@ -432,7 +435,7 @@ static void _udpIpv6UninitSocket(tUdpIpv6Context *pContext)
 *  Thread function for the IPv6 UDP socket receiving.
 *  @param [in]  pArg  A @ref tUdpIpv6Context object.
 */
-static void *_udpIpv6SockRecvTask(void *pArg)
+static void *_udpIpv6RecvTask(void *pArg)
 {
     tUdpIpv6Context *pContext = pArg;
     char ipv6Str[INET6_ADDRSTRLEN];
@@ -488,12 +491,15 @@ static void *_udpIpv6SockRecvTask(void *pArg)
         );
         LOG_DUMP("IPv6 UDP recv", pContext->recvMsg, len);
 
-        pContext->pRecvFunc(
-            pContext->pArg,
-            pContext->recvMsg,
-            len,
-            (struct sockaddr *)&recvAddr
-        );
+        if ( pContext->pRecvFunc )
+        {
+            pContext->pRecvFunc(
+                pContext->pArg,
+                pContext->recvMsg,
+                len,
+                (struct sockaddr *)&recvAddr
+            );
+        }
     }
 
     LOG_2("stop the thread: %s\n", __func__);
@@ -553,7 +559,7 @@ tUdpIpv6Handle comm_udpIpv6Init(
     error = pthread_create(
                 &(pContext->thread),
                 NULL,
-                _udpIpv6SockRecvTask,
+                _udpIpv6RecvTask,
                 pContext
             );
     if (error != 0)
@@ -584,7 +590,6 @@ void comm_udpIpv6Uninit(tUdpIpv6Handle handle)
             pContext->running = 0;
             pthread_cancel( pContext->thread );
             pthread_join(pContext->thread, NULL);
-            pContext->pRecvFunc = NULL;
             usleep(1000);
         }
 

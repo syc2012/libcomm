@@ -56,6 +56,14 @@ void proxy_launchTcp(tMapping *pMapping)
     pMapping->tcpServerHandle = handle;
 }
 
+void proxy_ceaseTcp(tMapping *pMapping)
+{
+    comm_tcpIpv4ServerUninit( pMapping->tcpServerHandle );
+    pMapping->tcpServerHandle = 0;
+    pMapping->tcpConnect = 0;
+    pMapping->pTcpUser = NULL;
+}
+
 static void ipcStreamExitFunc(void *pArg, int code)
 {
     tMapping *pMapping = pArg;
@@ -131,9 +139,17 @@ void proxy_connectIpc(tMapping *pMapping)
         }
         else
         {
+            /* IPC stream server connected */
             pMapping->pipeConnect = 1;
         }
     }
+}
+
+void proxy_disconnectIpc(tMapping *pMapping)
+{
+    comm_ipcStreamClientUninit( pMapping->ipcStreamHandle );
+    pMapping->ipcStreamHandle = 0;
+    pMapping->pipeConnect = 0;
 }
 
 int proxy_init(void)
@@ -160,13 +176,8 @@ void proxy_uninit(void)
     {
         if ( g_pMapping[i] )
         {
-            comm_ipcStreamClientUninit( g_pMapping[i]->ipcStreamHandle );
-            comm_tcpIpv4ServerUninit( g_pMapping[i]->tcpServerHandle );
-            g_pMapping[i]->ipcStreamHandle = 0;
-            g_pMapping[i]->tcpServerHandle = 0;
-            g_pMapping[i]->pipeConnect = 0;
-            g_pMapping[i]->tcpConnect = 0;
-            g_pMapping[i]->pTcpUser = NULL;
+            proxy_disconnectIpc( g_pMapping[i] );
+            proxy_ceaseTcp( g_pMapping[i] );
         }
     }
 }

@@ -191,6 +191,30 @@ int  comm_tcpIpv6ServerGetClientNum(tTcpIpv6ServerHandle handle);
 /************************ End   of TCP Server ************************/
 
 
+/************************ Begin of Raw ************************/
+typedef unsigned long  tRawHandle;
+typedef void (*tRawRecvCb)(
+            void           *pArg,
+            unsigned char  *pData,
+            unsigned short  size
+        );
+
+tRawHandle comm_rawSockInit(
+               char       *pEthDev,
+               tRawRecvCb  pRecvFunc,
+               void       *pArg
+           );
+void comm_rawSockUninit(tRawHandle handle);
+int  comm_rawSockSend(
+         tRawHandle      handle,
+         unsigned char  *pData,
+         unsigned short  size
+     );
+int  comm_rawPromiscMode(tRawHandle handle, int enable);
+void comm_rawGetMacAddr(tRawHandle handle, unsigned char *pAddr);
+/************************ End   of Raw ************************/
+
+
 /************************ Begin of FIFO ************************/
 typedef unsigned long  tFifoHandle;
 typedef void (*tFifoGetCb)(

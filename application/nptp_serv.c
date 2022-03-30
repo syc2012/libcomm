@@ -14,8 +14,6 @@ int g_mappingNum = 0;
 
 tIpcDgramHandle g_ipcDgramhandle;
 
-int g_dumpFlag = 0;
-
 
 static void ipcRecvFunc(
     void           *pArg,
@@ -24,6 +22,8 @@ static void ipcRecvFunc(
     char           *pPath
 )
 {
+    int flag;
+
     pData[ size ] = 0x00;
     if (0 == strcmp("help", (char *)pData))
     {
@@ -39,8 +39,8 @@ static void ipcRecvFunc(
     }
     else if (0 == strcmp("dump", (char *)pData))
     {
-        g_dumpFlag ^= 0x1;
-        comm_setDumpFlag( g_dumpFlag );
+        flag = comm_getDumpFlag();
+        comm_setDumpFlag(flag ^ 0x1);
     }
     else if (0 == strcmp("0", (char *)pData))
     {

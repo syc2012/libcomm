@@ -19,6 +19,9 @@ comm_ipc_dgram.c comm_ipc_stream.c
 comm_netlink.c
   Netlink socket for user and kernel space communication.
 
+comm_raw.c
+  Raw socket for network directly communication.
+
 comm_tcp_client.c comm_tcp_server.c
   TCP socket for network communication.
 

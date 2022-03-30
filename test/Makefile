@@ -33,6 +33,7 @@ APPS += ipc_recv ipc_send
 APPS += netlink_recv netlink_send
 APPS += udp_recv udp_send
 APPS += tcp_recv tcp_send
+APPS += raw_recv raw_send
 APPS += fifo_recv fifo_send
 APPS += uart_recv uart_send
 
@@ -61,6 +62,12 @@ tcp_recv: tcp_recv.o
 	$(CC) $(LDFLAGS) -o $@ $<
 
 tcp_send: tcp_send.o
+	$(CC) $(LDFLAGS) -o $@ $<
+
+raw_recv: raw_recv.o
+	$(CC) $(LDFLAGS) -o $@ $<
+
+raw_send: raw_send.o
 	$(CC) $(LDFLAGS) -o $@ $<
 
 fifo_recv: fifo_recv.o

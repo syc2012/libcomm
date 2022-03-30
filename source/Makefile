@@ -13,6 +13,7 @@ SRC += $(SRC_DIR)/comm_log.c
 SRC += $(SRC_DIR)/comm_udp.c
 SRC += $(SRC_DIR)/comm_tcp_client.c
 SRC += $(SRC_DIR)/comm_tcp_server.c
+SRC += $(SRC_DIR)/comm_raw.c
 SRC += $(SRC_DIR)/comm_fifo.c
 SRC += $(SRC_DIR)/comm_ipc_dgram.c
 SRC += $(SRC_DIR)/comm_ipc_stream.c
@@ -46,12 +47,12 @@ LDFLAGS += -Wl,-soname,libcomm.so.1
 #  Build
 ############
 
-all: $(LIB_DIR)/libcomm.so.1.0.1 $(LIB_DIR)/libcomm.a
+all: $(LIB_DIR)/libcomm.so.1.0.2 $(LIB_DIR)/libcomm.a
 	@$(STRIP) $^
 
-$(LIB_DIR)/libcomm.so.1.0.1: $(OBJ)
+$(LIB_DIR)/libcomm.so.1.0.2: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $(OBJ)
-	@cd $(LIB_DIR) && ln -sf libcomm.so.1.0.1 libcomm.so.1
+	@cd $(LIB_DIR) && ln -sf libcomm.so.1.0.2 libcomm.so.1
 	@cd $(LIB_DIR) && ln -sf libcomm.so.1     libcomm.so
 
 $(LIB_DIR)/libcomm.a: $(OBJ)
@@ -61,7 +62,7 @@ $(LIB_DIR)/libcomm.a: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	@rm -f $(LIB_DIR)/libcomm.so $(LIB_DIR)/libcomm.so.1 $(LIB_DIR)/libcomm.so.1.0.1
+	@rm -f $(LIB_DIR)/libcomm.so $(LIB_DIR)/libcomm.so.1 $(LIB_DIR)/libcomm.so.1.0.2
 	@rm -f $(LIB_DIR)/libcomm.a
 	@rm -f $(OBJ)
 

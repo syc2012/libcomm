@@ -118,12 +118,15 @@ static void *_ipcDgramRecvTask(void *pArg)
         LOG_3("<- %s\n", recvAddr.sun_path);
         LOG_DUMP("IPC datagram recv", pContext->recvMsg, len);
 
-        pContext->pRecvFunc(
-            pContext->pArg,
-            pContext->recvMsg,
-            len,
-            recvAddr.sun_path
-        );
+        if ( pContext->pRecvFunc )
+        {
+            pContext->pRecvFunc(
+                pContext->pArg,
+                pContext->recvMsg,
+                len,
+                recvAddr.sun_path
+            );
+        }
     }
 
     LOG_2("stop the thread: %s\n", __func__);
