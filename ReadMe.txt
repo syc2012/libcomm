@@ -43,6 +43,12 @@ nptp_conf.xml
         <DESC>Description string</DESC>
     </MAPPING>
 
+nptp_serv
+  Named Pipe TCP Proxy service deamon.
+
+nptp_ctrl
+  Named Pipe TCP Proxy control program.
+
 
 [ Build Command ]
 

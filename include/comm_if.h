@@ -211,7 +211,8 @@ int  comm_rawSockSend(
          unsigned short  size
      );
 int  comm_rawPromiscMode(tRawHandle handle, int enable);
-void comm_rawGetMacAddr(tRawHandle handle, unsigned char *pAddr);
+int  comm_rawGetMtu(tRawHandle handle);
+unsigned char *comm_rawGetHwAddr(tRawHandle handle);
 /************************ End   of Raw ************************/
 
 

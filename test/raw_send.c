@@ -9,17 +9,17 @@
 
 
 unsigned char g_pingReq[] = {
-    /* Ethernet */
+    /* Ethernet (14-byte) */
     0x00, 0x23, 0x24, 0x37, 0x7b, 0xfc,
     0x00, 0x26, 0x6c, 0x4a, 0xde, 0x8f,
     0x08, 0x00,
-    /* IP */
+    /* IP (20-byte) */
     0x45, 0x00, 0x00, 0x54,
     0x00, 0x00, 0x40, 0x00,
     0x40, 0x01, 0xb4, 0xcb,
     0xc0, 0xa8, 0x02, 0x47,
     0xc0, 0xa8, 0x02, 0x46,
-    /* ICMP */
+    /* ICMP (64-byte) */
     0x08, 0x00, 0x8a, 0xdd, 0xd3, 0x19, 0x00, 0x01,
     0x5f, 0xb7, 0x43, 0x62, 0x06, 0xeb, 0x05, 0x00,
     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -33,7 +33,7 @@ unsigned char g_pingReq[] = {
 int main(int argc,char *argv[])
 {
     tRawHandle handle;
-    unsigned char macAddr[6];
+    unsigned char *pMac;
     int i;
 
 
@@ -56,17 +56,20 @@ int main(int argc,char *argv[])
         return -1;
     }
 
-    comm_rawGetMacAddr(handle, macAddr);
-    printf(
-        "[%s] MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n\n",
-        APP_NAME,
-        macAddr[0],
-        macAddr[1],
-        macAddr[2],
-        macAddr[3],
-        macAddr[4],
-        macAddr[5]
-    );
+    pMac = comm_rawGetHwAddr( handle );
+    if ( pMac )
+    {
+        printf(
+            "[%s] MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n\n",
+            APP_NAME,
+            pMac[0],
+            pMac[1],
+            pMac[2],
+            pMac[3],
+            pMac[4],
+            pMac[5]
+        );
+    }
 
     printf("[%s] %u bytes\n", APP_NAME, sizeof(g_pingReq));
     for (i=0; i<sizeof(g_pingReq); i++)
