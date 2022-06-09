@@ -28,8 +28,6 @@ typedef struct _tTcpIpv4ServerContext
     void               *pServerArg;
     pthread_t           thread;
     int                 running;
-
-    unsigned char       recvMsg[COMM_BUF_SIZE+1];
 } tTcpIpv4ServerContext;
 
 static tTcpUser *_tcpIpv4AcceptClient(
@@ -614,8 +612,6 @@ typedef struct _tTcpIpv6ServerContext
     void                *pServerArg;
     pthread_t            thread;
     int                  running;
-
-    unsigned char        recvMsg[COMM_BUF_SIZE+1];
 } tTcpIpv6ServerContext;
 
 static tTcpUser *_tcpIpv6AcceptClient(

@@ -360,8 +360,6 @@ typedef struct _tIpcStreamServerContext
     void             *pServerArg;
     pthread_t         thread;
     int               running;
-
-    unsigned char     recvMsg[COMM_BUF_SIZE+1];
 } tIpcStreamServerContext;
 
 static tIpcUser *_ipcStreamAcceptClient(
