@@ -503,7 +503,7 @@ static void *_ipcStreamServerListenTask(void *pArg)
 
     LOG_2("start the thread: %s\n", __func__);
 
-    if (listen(pContext->fd, pContext->maxUserNum) < 0)
+    if (listen(pContext->fd, (IPC_USER_NUM << 1)) < 0)
     {
         perror( "listen" );
         close( pContext->fd );

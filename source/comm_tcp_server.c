@@ -176,7 +176,7 @@ static void *_tcpIpv4ServerListenTask(void *pArg)
 
     LOG_2("start the thread: %s\n", __func__);
 
-    if (listen(pContext->fd, pContext->maxUserNum) < 0)
+    if (listen(pContext->fd, (TCP_USER_NUM << 1)) < 0)
     {
         perror( "listen" );
         close( pContext->fd );
@@ -758,7 +758,7 @@ static void *_tcpIpv6ServerRecvTask(void *pArg)
 }
 
 /**
-*  Thread function for the IPv6 TCP socket receiving.
+*  Thread function for the IPv6 TCP socket listen.
 *  @param [in]  pArg  A @ref tTcpIpv6ServerContext object.
 */
 static void *_tcpIpv6ServerListenTask(void *pArg)
@@ -771,7 +771,7 @@ static void *_tcpIpv6ServerListenTask(void *pArg)
 
     LOG_2("start the thread: %s\n", __func__);
 
-    if (listen(pContext->fd, pContext->maxUserNum) < 0)
+    if (listen(pContext->fd, (TCP_USER_NUM << 1)) < 0)
     {
         perror( "listen" );
         close( pContext->fd );
