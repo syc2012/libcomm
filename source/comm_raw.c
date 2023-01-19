@@ -149,11 +149,13 @@ static void *_rawRecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     while ( pContext->running )
     {
         LOG_3("Raw socket ... recvfrom\n");
+        pthread_testcancel();
         len = recvfrom(
                   pContext->fd,
                   pContext->recvMsg,
@@ -168,6 +170,7 @@ static void *_rawRecvTask(void *pArg)
             perror( "recvfrom" );
             break;
         }
+        pthread_testcancel();
 
         LOG_3("<- Raw socket (%s)\n", pContext->ifName);
         LOG_DUMP("Raw recv", pContext->recvMsg, len);
@@ -181,7 +184,7 @@ static void *_rawRecvTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 
@@ -199,6 +202,7 @@ tRawHandle comm_rawSockInit(
 )
 {
     tRawContext *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
 
 
@@ -237,9 +241,12 @@ tRawHandle comm_rawSockInit(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                  &(pContext->thread),
-                 NULL,
+                 &tattr,
                  _rawRecvTask,
                  pContext
              );
@@ -250,6 +257,8 @@ tRawHandle comm_rawSockInit(
         free( pContext );
         return 0;
     }
+
+    pthread_attr_destroy( &tattr );
 
 _RAW_DONE:
     LOG_1("Raw socket initialized\n");
@@ -266,22 +275,17 @@ void comm_rawSockUninit(tRawHandle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
         if ( pContext->promisc )
         {
             comm_rawPromiscMode(handle, 0);
         }
-
         _rawUninit( pContext );
-
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("Raw socket un-initialized\n");
     }
 }

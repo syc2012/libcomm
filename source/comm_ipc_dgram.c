@@ -91,6 +91,7 @@ static void *_ipcDgramRecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     /* address for the source app */
@@ -100,6 +101,7 @@ static void *_ipcDgramRecvTask(void *pArg)
     while ( pContext->running )
     {
         LOG_3("%s ... recvfrom\n", pContext->localPath);
+        pthread_testcancel();
         len = recvfrom(
                   pContext->fd,
                   pContext->recvMsg,
@@ -114,6 +116,7 @@ static void *_ipcDgramRecvTask(void *pArg)
             perror( "recvfrom" );
             break;
         }
+        pthread_testcancel();
 
         LOG_3("<- %s\n", recvAddr.sun_path);
         LOG_DUMP("IPC datagram recv", pContext->recvMsg, len);
@@ -132,7 +135,7 @@ static void *_ipcDgramRecvTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -149,6 +152,7 @@ tIpcDgramHandle comm_ipcDgramInit(
 )
 {
     tIpcDgramContext *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
 
 
@@ -182,9 +186,12 @@ tIpcDgramHandle comm_ipcDgramInit(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                 &(pContext->thread),
-                NULL,
+                &tattr,
                 _ipcDgramRecvTask,
                 pContext
             );
@@ -195,6 +202,8 @@ tIpcDgramHandle comm_ipcDgramInit(
         free( pContext );
         return 0;
     }
+
+    pthread_attr_destroy( &tattr );
 
 _DONE:
     LOG_1("IPC datagram initialized\n");
@@ -211,17 +220,13 @@ void comm_ipcDgramUninit(tIpcDgramHandle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
         _ipcDgramUninit( pContext );
-
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("IPC datagram un-initialized\n");
     }
 }

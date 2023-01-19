@@ -36,11 +36,14 @@ static void *_uartRecvTask(void *pArg)
     tUartContext *pContext = pArg;
     int len;
 
+
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     while ( pContext->running )
     {
         LOG_3("UART ... read\n");
+        pthread_testcancel();
         len = read(
                   pContext->fd,
                   pContext->recvMsg,
@@ -52,13 +55,15 @@ static void *_uartRecvTask(void *pArg)
             {
                 case EAGAIN:
                     LOG_ERROR("%s: read EAGAIN\n", __func__);
-                    usleep(5 * 1000); 
+                    pthread_testcancel();
+                    usleep(5 * 1000);
+                    pthread_testcancel();
                     continue;
                     break;
              
                 default:
                     LOG_ERROR("%s: read error(%s)\n", __func__, strerror(errno));
-                    pthread_exit(0); 
+                    pContext->running = 0;
                     break;  
             }
         }
@@ -67,7 +72,7 @@ static void *_uartRecvTask(void *pArg)
             if (pContext->waitTime < 0)
             {
                 LOG_WARN("%s: device is lost\n", __func__);
-                pthread_exit(0); 
+                pContext->running = 0;
             }
         }
         else
@@ -86,12 +91,13 @@ static void *_uartRecvTask(void *pArg)
                 );
             }
         }
+        pthread_testcancel();
     }
 
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -104,6 +110,7 @@ static void *_uartRecvTask(void *pArg)
 tUartHandle uart_openDev(char *pDevName, tUartRecvCb pRecvFunc, void *pArg)
 {
     tUartContext *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
     int fd;
 
@@ -135,9 +142,12 @@ tUartHandle uart_openDev(char *pDevName, tUartRecvCb pRecvFunc, void *pArg)
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                 &(pContext->thread),
-                NULL,
+                &tattr,
                 _uartRecvTask,
                 pContext
             );
@@ -148,6 +158,8 @@ tUartHandle uart_openDev(char *pDevName, tUartRecvCb pRecvFunc, void *pArg)
         free( pContext );
         return 0;
     }
+
+    pthread_attr_destroy( &tattr );
 
     LOG_1("UART device open\n");
     return ((tUartHandle)pContext);
@@ -163,20 +175,16 @@ void uart_closeDev(tUartHandle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
         if (pContext->fd > 0)
         {
             close( pContext->fd );
         }
-
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("UART device close\n");
     }
 }

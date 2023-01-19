@@ -96,11 +96,13 @@ static void *_fifoGetTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     while ( pContext->running )
     {
         LOG_3("fd(%d) ... read\n", pContext->fd);
+        pthread_testcancel();
         len = read(
                   pContext->fd,
                   pContext->recvMsg,
@@ -118,6 +120,7 @@ static void *_fifoGetTask(void *pArg)
             }
             break;
         }
+        pthread_testcancel();
 
         LOG_3("<- %s\n", pContext->fileName);
         LOG_DUMP("FIFO: read", pContext->recvMsg, len);
@@ -135,7 +138,7 @@ static void *_fifoGetTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -156,6 +159,7 @@ tFifoHandle comm_fifoReadInit(
 )
 {
     tFifoContext *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
 
 
@@ -194,9 +198,12 @@ tFifoHandle comm_fifoReadInit(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                 &(pContext->thread),
-                NULL,
+                &tattr,
                 _fifoGetTask,
                 pContext
             );
@@ -208,6 +215,7 @@ tFifoHandle comm_fifoReadInit(
         return 0;
     }
 
+    pthread_attr_destroy( &tattr );
 
     LOG_1("FIFO read only initialized\n");
     return ((tFifoHandle)pContext);
@@ -223,17 +231,13 @@ void comm_fifoReadUninit(tFifoHandle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
         _closeFifoRead( pContext );
-
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("FIFO read only un-initialized\n");
     }
 }

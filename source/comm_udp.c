@@ -86,6 +86,7 @@ static void *_udpIpv4RecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     /* source address */
@@ -95,6 +96,7 @@ static void *_udpIpv4RecvTask(void *pArg)
     while ( pContext->running )
     {
         LOG_3("IPv4 UDP ... recvfrom\n");
+        pthread_testcancel();
         len = recvfrom(
                   pContext->fd,
                   pContext->recvMsg,
@@ -109,6 +111,7 @@ static void *_udpIpv4RecvTask(void *pArg)
             perror( "recvfrom" );
             break;
         }
+        pthread_testcancel();
 
         /*
         * Convert IPv4 address from byte array to string:
@@ -136,7 +139,7 @@ static void *_udpIpv4RecvTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -153,6 +156,7 @@ tUdpIpv4Handle comm_udpIpv4Init(
 )
 {
     tUdpIpv4Context *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
 
 
@@ -187,9 +191,12 @@ tUdpIpv4Handle comm_udpIpv4Init(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                 &(pContext->thread),
-                NULL,
+                &tattr,
                 _udpIpv4RecvTask,
                 pContext
             );
@@ -200,6 +207,8 @@ tUdpIpv4Handle comm_udpIpv4Init(
         free( pContext );
         return 0;
     }
+
+    pthread_attr_destroy( &tattr );
 
 _IPV4_DONE:
     LOG_1("IPv4 UDP initialized\n");
@@ -216,17 +225,13 @@ void comm_udpIpv4Uninit(tUdpIpv4Handle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
-     
-        _udpIpv4UninitSocket( pContext );
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
+        _udpIpv4UninitSocket( pContext );
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("IPv4 UDP un-initialized\n");
     }
 }
@@ -444,6 +449,7 @@ static void *_udpIpv6RecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     /* source address */
@@ -453,6 +459,7 @@ static void *_udpIpv6RecvTask(void *pArg)
     while ( pContext->running )
     {
         LOG_3("IPv6 UDP ... recvfrom\n");
+        pthread_testcancel();
         len = recvfrom(
                   pContext->fd,
                   pContext->recvMsg,
@@ -467,6 +474,7 @@ static void *_udpIpv6RecvTask(void *pArg)
             perror( "recvfrom" );
             break;
         }
+        pthread_testcancel();
 
         /*
         * Convert IPv6 address from byte array to string:
@@ -505,7 +513,7 @@ static void *_udpIpv6RecvTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -522,6 +530,7 @@ tUdpIpv6Handle comm_udpIpv6Init(
 )
 {
     tUdpIpv6Context *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
 
 
@@ -556,9 +565,12 @@ tUdpIpv6Handle comm_udpIpv6Init(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                 &(pContext->thread),
-                NULL,
+                &tattr,
                 _udpIpv6RecvTask,
                 pContext
             );
@@ -569,6 +581,8 @@ tUdpIpv6Handle comm_udpIpv6Init(
         free( pContext );
         return 0;
     }
+
+    pthread_attr_destroy( &tattr );
 
 _IPV6_DONE:
     LOG_1("IPv6 UDP initialized\n");
@@ -585,17 +599,13 @@ void comm_udpIpv6Uninit(tUdpIpv6Handle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
         _udpIpv6UninitSocket( pContext );
-
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("IPv6 UDP un-initialized\n");
     }
 }

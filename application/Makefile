@@ -38,9 +38,9 @@ endif
 ############
 
 LDFLAGS += -L$(LIB_DIR)
+LDFLAGS += -lcomm
 LDFLAGS += -lpthread
 LDFLAGS += -lxml2
-LDFLAGS += -lcomm
 
 
 ############
@@ -65,10 +65,10 @@ endif
 -include $(DEPS)
 
 $(NPTP_CTRL): nptp_ctrl.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $^ $(LDFLAGS) -o $@
 
 $(NPTP_SERV): nptp_serv.o nptp_event.o nptp_xml.o nptp_proxy.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) $^ $(LDFLAGS) -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<

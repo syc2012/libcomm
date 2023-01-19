@@ -109,6 +109,7 @@ static void *_tcpIpv4ServerRecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     pContext = pUser->pServer;
@@ -116,6 +117,7 @@ static void *_tcpIpv4ServerRecvTask(void *pArg)
     while (pUser->fd > 0)
     {
         LOG_3("IPv4 TCP server ... recv\n");
+        pthread_testcancel();
         len = recv(
                   pUser->fd,
                   pUser->recvMsg,
@@ -137,6 +139,7 @@ static void *_tcpIpv4ServerRecvTask(void *pArg)
             }
             break;
         }
+        pthread_testcancel();
 
         LOG_3(
             "<- %s:%d\n",
@@ -160,7 +163,7 @@ static void *_tcpIpv4ServerRecvTask(void *pArg)
 
     _tcpIpv4DisconnectClient(pContext, pUser);
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -175,6 +178,7 @@ static void *_tcpIpv4ServerListenTask(void *pArg)
 
 
     LOG_2("start the thread: %s\n", __func__);
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
 
     if (listen(pContext->fd, (TCP_USER_NUM << 1)) < 0)
     {
@@ -196,6 +200,7 @@ static void *_tcpIpv4ServerListenTask(void *pArg)
         int fd;
 
         LOG_3("IPv4 TCP server ... accept\n");
+        pthread_testcancel();
         fd = accept(
                  pContext->fd,
                  (struct sockaddr *)&clitAddr,
@@ -207,6 +212,7 @@ static void *_tcpIpv4ServerListenTask(void *pArg)
             perror( "accept" );
             break;
         }
+        pthread_testcancel();
 
         LOG_1("TCP client connect from %s\n", inet_ntoa(clitAddr.sin_addr));
 
@@ -221,7 +227,7 @@ static void *_tcpIpv4ServerListenTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -244,6 +250,7 @@ tTcpIpv4ServerHandle comm_tcpIpv4ServerInit(
 )
 {
     tTcpIpv4ServerContext *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
 
 
@@ -296,9 +303,12 @@ tTcpIpv4ServerHandle comm_tcpIpv4ServerInit(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                 &(pContext->thread),
-                NULL,
+                &tattr,
                 _tcpIpv4ServerListenTask,
                 pContext
             );
@@ -309,6 +319,8 @@ tTcpIpv4ServerHandle comm_tcpIpv4ServerInit(
         free( pContext );
         return 0;
     }
+
+    pthread_attr_destroy( &tattr );
 
     LOG_1("IPv4 TCP server initialized\n");
     return ((tTcpIpv4ServerHandle)pContext);
@@ -325,23 +337,18 @@ void comm_tcpIpv4ServerUninit(tTcpIpv4ServerHandle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
         pContext->userNum = 0;
         for (i=0; i<pContext->maxUserNum; i++)
         {
             _tcpIpv4DisconnectClient(pContext, pContext->pUser[i]);
         }
-
         _tcpIpv4UninitServer( pContext );
-
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("IPv4 TCP server un-initialized\n");
     }
 }
@@ -360,6 +367,7 @@ static tTcpUser *_tcpIpv4AcceptClient(
 )
 {
     tTcpUser *pUser = NULL;
+    pthread_attr_t tattr;
     int bufSize = 0;
     socklen_t bufSizeLen;
     int noDelay = 1;
@@ -395,9 +403,12 @@ static tTcpUser *_tcpIpv4AcceptClient(
                 pUser->addrIpv4 = (*pAddr);
                 pUser->fd = fd;
 
+                pthread_attr_init( &tattr );
+                pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+
                 error = pthread_create(
                             &(pUser->thread),
-                            NULL,
+                            &tattr,
                             _tcpIpv4ServerRecvTask,
                             pUser
                         );
@@ -407,6 +418,8 @@ static tTcpUser *_tcpIpv4AcceptClient(
                     free( pUser );
                     return NULL;
                 }
+
+                pthread_attr_destroy( &tattr );
 
                 /* notify the client object to the server application */
                 if ( pContext->pServerAcptFunc )
@@ -457,11 +470,9 @@ static void _tcpIpv4DisconnectClient(
 
         if (pUser->fd > 0)
         {
+            pthread_cancel( pUser->thread );
             close( pUser->fd );
             pUser->fd = -1;
-
-            pthread_cancel( pUser->thread );
-            pthread_join(pUser->thread, NULL);
         }
 
         free( pUser );
@@ -694,6 +705,7 @@ static void *_tcpIpv6ServerRecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     pContext = pUser->pServer;
@@ -701,6 +713,7 @@ static void *_tcpIpv6ServerRecvTask(void *pArg)
     while (pUser->fd > 0)
     {
         LOG_3("IPv6 TCP server ... recv\n");
+        pthread_testcancel();
         len = recv(
                   pUser->fd,
                   pUser->recvMsg,
@@ -725,6 +738,7 @@ static void *_tcpIpv6ServerRecvTask(void *pArg)
             }
             break;
         }
+        pthread_testcancel();
 
         inet_ntop(
             AF_INET6,
@@ -754,7 +768,7 @@ static void *_tcpIpv6ServerRecvTask(void *pArg)
 
     _tcpIpv6DisconnectClient(pContext, pUser);
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -769,6 +783,7 @@ static void *_tcpIpv6ServerListenTask(void *pArg)
     socklen_t clitAddrLen = sizeof( struct sockaddr_in6 );
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     if (listen(pContext->fd, (TCP_USER_NUM << 1)) < 0)
@@ -791,6 +806,7 @@ static void *_tcpIpv6ServerListenTask(void *pArg)
         int fd;
 
         LOG_3("IPv6 TCP server ... accept\n");
+        pthread_testcancel();
         fd = accept(
                  pContext->fd,
                  (struct sockaddr *)&clitAddr,
@@ -802,6 +818,7 @@ static void *_tcpIpv6ServerListenTask(void *pArg)
             perror( "accept" );
             break;
         }
+        pthread_testcancel();
 
         inet_ntop(
             AF_INET6,
@@ -822,7 +839,7 @@ static void *_tcpIpv6ServerListenTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -845,6 +862,7 @@ tTcpIpv6ServerHandle comm_tcpIpv6ServerInit(
 )
 {
     tTcpIpv6ServerContext *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
 
 
@@ -897,9 +915,12 @@ tTcpIpv6ServerHandle comm_tcpIpv6ServerInit(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                 &(pContext->thread),
-                NULL,
+                &tattr,
                 _tcpIpv6ServerListenTask,
                 pContext
             );
@@ -910,6 +931,8 @@ tTcpIpv6ServerHandle comm_tcpIpv6ServerInit(
         free( pContext );
         return 0;
     }
+
+    pthread_attr_destroy( &tattr );
 
     LOG_1("IPv6 TCP server initialized\n");
     return ((tTcpIpv6ServerHandle)pContext);
@@ -926,23 +949,18 @@ void comm_tcpIpv6ServerUninit(tTcpIpv6ServerHandle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
         pContext->userNum = 0;
         for (i=0; i<pContext->maxUserNum; i++)
         {
             _tcpIpv6DisconnectClient(pContext, pContext->pUser[i]);
         }
-
         _tcpIpv6UninitServer( pContext );
-
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("IPv6 TCP server un-initialized\n");
     }
 }
@@ -961,6 +979,7 @@ static tTcpUser *_tcpIpv6AcceptClient(
 )
 {
     tTcpUser *pUser = NULL;
+    pthread_attr_t tattr;
     int  bufSize = 0;
     socklen_t bufSizeLen;
     int  noDelay = 1;
@@ -996,9 +1015,12 @@ static tTcpUser *_tcpIpv6AcceptClient(
                 pUser->addrIpv6 = (*pAddr);
                 pUser->fd = fd;
 
+                pthread_attr_init( &tattr );
+                pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+
                 error = pthread_create(
                             &(pUser->thread),
-                            NULL,
+                            &tattr,
                             _tcpIpv6ServerRecvTask,
                             pUser
                         );
@@ -1008,6 +1030,8 @@ static tTcpUser *_tcpIpv6AcceptClient(
                     free( pUser );
                     return NULL;
                 }
+
+                pthread_attr_destroy( &tattr );
 
                 /* notify the client object to the server application */
                 if ( pContext->pServerAcptFunc )
@@ -1058,11 +1082,9 @@ static void _tcpIpv6DisconnectClient(
 
         if (pUser->fd > 0)
         {
+            pthread_cancel( pUser->thread );
             close( pUser->fd );
             pUser->fd = -1;
-
-            pthread_cancel( pUser->thread );
-            pthread_join(pUser->thread, NULL);
         }
 
         free( pUser );

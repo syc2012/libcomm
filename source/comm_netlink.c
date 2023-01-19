@@ -182,11 +182,13 @@ static void *_netlinkRecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     while ( pContext->running )
     {
         LOG_3("pid(%d) ... recvmsg\n", pContext->localAddr.nl_pid);
+        pthread_testcancel();
         len = recvmsg(pContext->fd, &(pContext->recvMsg), 0);
         if (len <= 0)
         {
@@ -200,6 +202,7 @@ static void *_netlinkRecvTask(void *pArg)
             }
             break;
         }
+        pthread_testcancel();
 
         LOG_3("<- kernel space\n");
         LOG_DUMP(
@@ -222,7 +225,7 @@ static void *_netlinkRecvTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -240,6 +243,7 @@ tNetlinkHandle comm_netlinkInit(
 )
 {
     tNetlinkContext *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
 
     pContext = malloc( sizeof( tNetlinkContext ) );
@@ -278,9 +282,12 @@ tNetlinkHandle comm_netlinkInit(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                  &(pContext->thread),
-                 NULL,
+                 &tattr,
                  _netlinkRecvTask,
                  pContext
              );
@@ -291,6 +298,8 @@ tNetlinkHandle comm_netlinkInit(
         free( pContext );
         return 0;
     }
+
+    pthread_attr_destroy( &tattr );
 
     LOG_1("netlink initialized\n");
     return ((tNetlinkHandle)pContext);
@@ -306,17 +315,13 @@ void comm_netlinkUninit(tNetlinkHandle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
         _netlinkUninit( pContext );
-
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("netlink un-initialized\n");
     }
 }

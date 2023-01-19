@@ -71,7 +71,7 @@ int main(int argc,char *argv[])
         );
     }
 
-    printf("[%s] %u bytes\n", APP_NAME, sizeof(g_pingReq));
+    printf("[%s] %lu bytes\n", APP_NAME, sizeof(g_pingReq));
     for (i=0; i<sizeof(g_pingReq); i++)
     {
         if ((i != 0) && ((i % 16) == 0))

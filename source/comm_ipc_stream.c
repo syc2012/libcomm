@@ -91,11 +91,13 @@ static void *_ipcStreamClientRecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     while ( pContext->running )
     {
         LOG_3("%s ... recv\n", pContext->localPath);
+        pthread_testcancel();
         len = recv(
                   pContext->fd,
                   pContext->recvMsg,
@@ -114,6 +116,7 @@ static void *_ipcStreamClientRecvTask(void *pArg)
             }
             break;
         }
+        pthread_testcancel();
 
         LOG_3("<- %s\n", pContext->remotePath);
         LOG_DUMP("IPC stream client recv", pContext->recvMsg, len);
@@ -131,7 +134,7 @@ static void *_ipcStreamClientRecvTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -202,15 +205,13 @@ void comm_ipcStreamClientUninit(tIpcStreamClientHandle handle)
     {
         if ( pContext->running )
         {
-            pContext->running = 0;
             pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
+            pContext->running = 0;
         }
 
         _ipcStreamUninitClient( pContext );
-
         free( pContext );
+
         LOG_1("IPC stream client un-initialized\n");
     }
 }
@@ -227,6 +228,7 @@ int comm_ipcStreamClientConnect(
 )
 {
     tIpcStreamClientContext *pContext = (tIpcStreamClientContext *)handle;
+    pthread_attr_t tattr;
     struct sockaddr_un servAddr;
     int servAddrLen;
     int error;
@@ -266,9 +268,12 @@ int comm_ipcStreamClientConnect(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+
     error = pthread_create(
                 &(pContext->thread),
-                NULL,
+                &tattr,
                 _ipcStreamClientRecvTask,
                 pContext
             );
@@ -276,8 +281,11 @@ int comm_ipcStreamClientConnect(
     {
         LOG_ERROR("fail to create IPC stream receiving thread\n");
         perror( "pthread_create" );
+        pContext->running = 0;
         return -1;
     }
+
+    pthread_attr_destroy( &tattr );
 
     return 0;
 }
@@ -440,6 +448,7 @@ static void *_ipcStreamServerRecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     pContext = pUser->pServer;
@@ -447,6 +456,7 @@ static void *_ipcStreamServerRecvTask(void *pArg)
     while (pUser->fd > 0)
     {
         LOG_3("%s ... recv\n", pUser->fileName);
+        pthread_testcancel();
         len = recv(
                   pUser->fd,
                   pUser->recvMsg,
@@ -468,6 +478,7 @@ static void *_ipcStreamServerRecvTask(void *pArg)
             }
             break;
         }
+        pthread_testcancel();
 
         LOG_3("<- %s\n", pUser->fileName);
         LOG_DUMP("IPC stream server recv", pUser->recvMsg, len);
@@ -487,7 +498,7 @@ static void *_ipcStreamServerRecvTask(void *pArg)
 
     _ipcStreamDisconnectClient(pContext, pUser);
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -501,6 +512,7 @@ static void *_ipcStreamServerListenTask(void *pArg)
     socklen_t clitAddrLen = sizeof( struct sockaddr_un );
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     if (listen(pContext->fd, (IPC_USER_NUM << 1)) < 0)
@@ -523,6 +535,7 @@ static void *_ipcStreamServerListenTask(void *pArg)
         int fd;
 
         LOG_3("%s ... accept\n", pContext->localPath);
+        pthread_testcancel();
         fd = accept(
                  pContext->fd,
                  (struct sockaddr *)&clitAddr,
@@ -534,6 +547,7 @@ static void *_ipcStreamServerListenTask(void *pArg)
             perror( "accept" );
             break;
         }
+        pthread_testcancel();
 
         LOG_1("IPC stream client connect from %s\n", clitAddr.sun_path);
 
@@ -548,7 +562,7 @@ static void *_ipcStreamServerListenTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -571,6 +585,7 @@ tIpcStreamServerHandle comm_ipcStreamInitServer(
 )
 {
     tIpcStreamServerContext *pContext = NULL;
+    pthread_attr_t tattr;
     int error;
 
 
@@ -622,9 +637,12 @@ tIpcStreamServerHandle comm_ipcStreamInitServer(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_JOINABLE);
+
     error = pthread_create(
                 &(pContext->thread),
-                NULL,
+                &tattr,
                 _ipcStreamServerListenTask,
                 pContext
             );
@@ -635,6 +653,8 @@ tIpcStreamServerHandle comm_ipcStreamInitServer(
         free( pContext );
         return 0;
     }
+
+    pthread_attr_destroy( &tattr );
 
     LOG_1("IPC stream server initialized\n");
     return ((tIpcStreamServerHandle)pContext);
@@ -651,23 +671,18 @@ void comm_ipcStreamUninitServer(tIpcStreamServerHandle handle)
 
     if ( pContext )
     {
-        if ( pContext->running )
-        {
-            pContext->running = 0;
-            pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
-        }
+        pthread_cancel( pContext->thread );
 
+        pContext->running = 0;
         pContext->userNum = 0;
         for (i=0; i<pContext->maxUserNum; i++)
         {
             _ipcStreamDisconnectClient(pContext, pContext->pUser[i]);
         }
-
         _ipcStreamUninitServer( pContext );
-
         free( pContext );
+
+        pthread_join(pContext->thread, NULL);
         LOG_1("IPC stream server un-initialized\n");
     }
 }
@@ -686,6 +701,7 @@ static tIpcUser *_ipcStreamAcceptClient(
 )
 {
     tIpcUser *pUser = NULL;
+    pthread_attr_t tattr;
     int bufSize = 0;
     socklen_t bufSizeLen;
     int error;
@@ -716,9 +732,12 @@ static tIpcUser *_ipcStreamAcceptClient(
                 strcpy(pUser->fileName, pFileName);
                 pUser->fd = fd;
 
+                pthread_attr_init( &tattr );
+                pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+
                 error = pthread_create(
                             &(pUser->thread),
-                            NULL,
+                            &tattr,
                             _ipcStreamServerRecvTask,
                             pUser
                         );
@@ -728,6 +747,8 @@ static tIpcUser *_ipcStreamAcceptClient(
                     free( pUser );
                     return NULL;
                 }
+
+                pthread_attr_destroy( &tattr );
 
                 /* notify the client object to the server application */
                 if ( pContext->pServerAcptFunc )
@@ -778,11 +799,9 @@ static void _ipcStreamDisconnectClient(
 
         if (pUser->fd > 0)
         {
+            pthread_cancel( pUser->thread );
             close( pUser->fd );
             pUser->fd = -1;
-
-            pthread_cancel( pUser->thread );
-            pthread_join(pUser->thread, NULL);
         }
 
         free( pUser );

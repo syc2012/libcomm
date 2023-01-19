@@ -92,11 +92,13 @@ static void *_tcpIpv4ClientRecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     while ( pContext->running )
     {
         LOG_3("IPv4 TCP client ... recv\n");
+        pthread_testcancel();
         len = recv(
                   pContext->fd,
                   pContext->recvMsg,
@@ -115,6 +117,7 @@ static void *_tcpIpv4ClientRecvTask(void *pArg)
             }
             break;
         }
+        pthread_testcancel();
 
         LOG_3("<- IPv4 TCP server\n");
         LOG_DUMP("IPv4 TCP client recv", pContext->recvMsg, len);
@@ -132,7 +135,7 @@ static void *_tcpIpv4ClientRecvTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -204,15 +207,13 @@ void comm_tcpIpv4ClientUninit(tTcpIpv4ClientHandle handle)
     {
         if ( pContext->running )
         {
-            pContext->running = 0;
             pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
+            pContext->running = 0;
         }
 
         _tcpIpv4UninitClient( pContext );
-
         free( pContext );
+
         LOG_1("IPv4 TCP client un-initialized\n");
     }
 }
@@ -231,6 +232,7 @@ int comm_tcpIpv4ClientConnect(
 )
 {
     tTcpIpv4ClientContext *pContext = (tTcpIpv4ClientContext *)handle;
+    pthread_attr_t tattr;
     struct sockaddr_in servAddr;
     int servAddrLen;
     int error;
@@ -276,9 +278,12 @@ int comm_tcpIpv4ClientConnect(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+
     error = pthread_create(
                 &pContext->thread,
-                NULL,
+                &tattr,
                 _tcpIpv4ClientRecvTask,
                 pContext
             );
@@ -286,8 +291,11 @@ int comm_tcpIpv4ClientConnect(
     {
         LOG_ERROR("fail to create IPv4 TCP receiving thread\n");
         perror( "pthread_create" );
+        pContext->running = 0;
         return -1;
     }
+
+    pthread_attr_destroy( &tattr );
 
     return 0;
 }
@@ -435,11 +443,13 @@ static void *_tcpIpv6ClientRecvTask(void *pArg)
     int len;
 
 
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
     LOG_2("start the thread: %s\n", __func__);
 
     while ( pContext->running )
     {
         LOG_3("IPv6 TCP client ... recv\n");
+        pthread_testcancel();
         len = recv(
                   pContext->fd,
                   pContext->recvMsg,
@@ -458,6 +468,7 @@ static void *_tcpIpv6ClientRecvTask(void *pArg)
             }
             break;
         }
+        pthread_testcancel();
 
         LOG_3("<- IPv6 TCP server\n");
         LOG_DUMP("IPv6 TCP client recv", pContext->recvMsg, len);
@@ -475,7 +486,7 @@ static void *_tcpIpv6ClientRecvTask(void *pArg)
     LOG_2("stop the thread: %s\n", __func__);
     pContext->running = 0;
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /**
@@ -547,15 +558,13 @@ void comm_tcpIpv6ClientUninit(tTcpIpv6ClientHandle handle)
     {
         if ( pContext->running )
         {
-            pContext->running = 0;
             pthread_cancel( pContext->thread );
-            pthread_join(pContext->thread, NULL);
-            usleep(1000);
+            pContext->running = 0;
         }
 
         _tcpIpv6UninitClient( pContext );
-
         free( pContext );
+
         LOG_1("IPv6 TCP client un-initialized\n");
     }
 }
@@ -574,6 +583,7 @@ int comm_tcpIpv6ClientConnect(
 )
 {
     tTcpIpv6ClientContext *pContext = (tTcpIpv6ClientContext *)handle;
+    pthread_attr_t tattr;
     struct sockaddr_in6 servAddr;
     int servAddrLen;
     int error;
@@ -619,9 +629,12 @@ int comm_tcpIpv6ClientConnect(
 
     pContext->running = 1;
 
+    pthread_attr_init( &tattr );
+    pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
+
     error = pthread_create(
                 &pContext->thread,
-                NULL,
+                &tattr,
                 _tcpIpv6ClientRecvTask,
                 pContext
             );
@@ -629,8 +642,11 @@ int comm_tcpIpv6ClientConnect(
     {
         LOG_ERROR("fail to create IPv6 TCP receiving thread\n");
         perror( "pthread_create" );
+        pContext->running = 0;
         return -1;
     }
+
+    pthread_attr_destroy( &tattr );
 
     return 0;
 }
