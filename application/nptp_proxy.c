@@ -36,7 +36,7 @@ static void tcpIpv4RecvFunc(
     comm_ipcStreamClientSend(pMapping->ipcStreamHandle, pData, size);
 }
 
-void proxy_launchTcp(tMapping *pMapping)
+int proxy_launchTcp(tMapping *pMapping)
 {
     tTcpIpv4ServerHandle handle;
 
@@ -51,9 +51,12 @@ void proxy_launchTcp(tMapping *pMapping)
     if (0 == handle)
     {
         PRINT("ERR: comm_tcpIpv4ServerInit\n");
+        pMapping->tcpServerHandle = 0;
+        return -1;
     }
 
     pMapping->tcpServerHandle = handle;
+    return 0;
 }
 
 void proxy_ceaseTcp(tMapping *pMapping)
@@ -88,7 +91,7 @@ static void ipcStreamRecvFunc(
     }
 }
 
-void proxy_connectIpc(tMapping *pMapping)
+int proxy_connectIpc(tMapping *pMapping)
 {
     tIpcStreamClientHandle handle;
     char clientPath[256];
@@ -116,6 +119,8 @@ void proxy_connectIpc(tMapping *pMapping)
     if (0 == handle)
     {
         PRINT("ERR: comm_ipcStreamClientInit\n");
+        pMapping->ipcStreamHandle = 0;
+        return -1;
     }
 
     pMapping->ipcStreamHandle = handle;
@@ -135,7 +140,8 @@ void proxy_connectIpc(tMapping *pMapping)
                 );
         if (error != 0)
         {
-            PRINT("ERR: comm_ipcStreamClientConnect\n");
+            PRINT("WRN: comm_ipcStreamClientConnect\n");
+            pMapping->pipeConnect = 0;
         }
         else
         {
@@ -143,6 +149,8 @@ void proxy_connectIpc(tMapping *pMapping)
             pMapping->pipeConnect = 1;
         }
     }
+    
+    return 0;
 }
 
 void proxy_disconnectIpc(tMapping *pMapping)
@@ -160,8 +168,8 @@ int proxy_init(void)
     {
         if ( g_pMapping[i] )
         {
-            proxy_launchTcp( g_pMapping[i] );
-            proxy_connectIpc( g_pMapping[i] );
+            if (proxy_launchTcp( g_pMapping[i] ) != 0) return -1;
+            if (proxy_connectIpc( g_pMapping[i] ) != 0) return -1;
         }
     }
 
