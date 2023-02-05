@@ -196,15 +196,20 @@ int main(int argc, char *argv[])
 
 
     opterr = 0;
-    while ((ch=getopt(argc, argv, "f")) != -1)
+    while ((ch=getopt(argc, argv, "fh")) != -1)
     {
         switch ( ch )
         {
             case 'f':
                 background = 0;
                 break;
+            case 'h':
+                printf("Usage: nptp_serv\n");
+                printf("     : nptp_serv -f\n\n");
+                return 0;
+                break;
             default:
-                ;
+                break;
         }
     }
 
@@ -221,6 +226,7 @@ int main(int argc, char *argv[])
     if (serv_init() != 0)
     {
         PRINT("ERR: fail to initial service\n");
+        serv_uninit();
         return -1;
     }
 
