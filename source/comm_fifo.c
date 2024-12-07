@@ -235,9 +235,9 @@ void comm_fifoReadUninit(tFifoHandle handle)
 
         pContext->running = 0;
         _closeFifoRead( pContext );
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("FIFO read only un-initialized\n");
     }
 }

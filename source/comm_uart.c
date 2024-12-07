@@ -182,9 +182,9 @@ void uart_closeDev(tUartHandle handle)
         {
             close( pContext->fd );
         }
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("UART device close\n");
     }
 }

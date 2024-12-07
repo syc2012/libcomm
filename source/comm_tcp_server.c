@@ -346,9 +346,9 @@ void comm_tcpIpv4ServerUninit(tTcpIpv4ServerHandle handle)
             _tcpIpv4DisconnectClient(pContext, pContext->pUser[i]);
         }
         _tcpIpv4UninitServer( pContext );
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("IPv4 TCP server un-initialized\n");
     }
 }
@@ -368,8 +368,6 @@ static tTcpUser *_tcpIpv4AcceptClient(
 {
     tTcpUser *pUser = NULL;
     pthread_attr_t tattr;
-    int bufSize = 0;
-    socklen_t bufSizeLen;
     int noDelay = 1;
     socklen_t noDelayLen;
     int error;
@@ -391,9 +389,6 @@ static tTcpUser *_tcpIpv4AcceptClient(
             if ( pUser )
             {
                 LOG_3("IPv4 TCP create client fd(%d)\n", fd);
-
-                bufSizeLen = sizeof( bufSize );
-                setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufSize, bufSizeLen);
 
                 noDelayLen = sizeof( noDelay );
                 setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &noDelay, noDelayLen);
@@ -958,9 +953,9 @@ void comm_tcpIpv6ServerUninit(tTcpIpv6ServerHandle handle)
             _tcpIpv6DisconnectClient(pContext, pContext->pUser[i]);
         }
         _tcpIpv6UninitServer( pContext );
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("IPv6 TCP server un-initialized\n");
     }
 }
@@ -980,8 +975,6 @@ static tTcpUser *_tcpIpv6AcceptClient(
 {
     tTcpUser *pUser = NULL;
     pthread_attr_t tattr;
-    int  bufSize = 0;
-    socklen_t bufSizeLen;
     int  noDelay = 1;
     socklen_t noDelayLen;
     int  error;
@@ -1003,9 +996,6 @@ static tTcpUser *_tcpIpv6AcceptClient(
             if ( pUser )
             {
                 LOG_3("IPv6 TCP create client fd(%d)\n", fd);
-
-                bufSizeLen = sizeof( bufSize );
-                setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufSize, bufSizeLen);
 
                 noDelayLen = sizeof( noDelay );
                 setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &noDelay, noDelayLen);

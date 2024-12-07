@@ -224,9 +224,9 @@ void comm_ipcDgramUninit(tIpcDgramHandle handle)
 
         pContext->running = 0;
         _ipcDgramUninit( pContext );
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("IPC datagram un-initialized\n");
     }
 }
@@ -239,7 +239,7 @@ void comm_ipcDgramUninit(tIpcDgramHandle handle)
 *  @param [in]  size       Data size.
 *  @returns  Message length (-1 is failed).
 */
-int comm_ipcDgramSendTo(
+int comm_ipcDgramSend(
     tIpcDgramHandle  handle,
     char            *pFileName,
     unsigned char   *pData,
@@ -299,5 +299,79 @@ int comm_ipcDgramSendTo(
     }
 
     return error;
+}
+
+/**
+*  Receive message from an application to another.
+*  @param [in]  handle  IPC datagram handle.
+*  @param [in]  pData   A pointer of data buffer.
+*  @param [in]  size    Data buffer size.
+*  @returns  Message length (-1 is failed).
+*/
+int comm_ipcDgramRecv(
+    tIpcDgramHandle  handle,
+    unsigned char   *pData,
+    unsigned short   size
+)
+{
+    tIpcDgramContext *pContext = (tIpcDgramContext *)handle;
+    struct sockaddr_un recvAddr;
+    socklen_t recvAddrLen;
+    int len;
+
+
+    if (NULL == pContext)
+    {
+        LOG_ERROR("%s: pContext is NULL\n", __func__);
+        return -1;
+    }
+
+    if (pContext->fd < 0)
+    {
+        LOG_ERROR("%s: %s is not ready\n", __func__, pContext->localPath);
+        return -1;
+    }
+
+    if ( pContext->pRecvFunc )
+    {
+        LOG_WARN("%s: pRecvFunc exists\n", __func__);
+        return -1;
+    }
+
+    if (NULL == pData)
+    {
+        LOG_WARN("%s: pData is NULL\n", __func__);
+        return -1;
+    }
+
+    if (0 == size)
+    {
+        LOG_WARN("%s: size is 0\n", __func__);
+        return -1;
+    }
+
+    /* address for the source app */
+    recvAddrLen = sizeof( struct sockaddr_un );
+    memset(&recvAddr, 0x00, recvAddrLen);
+
+    len = recvfrom(
+              pContext->fd,
+              pData,
+              size,
+              0,
+              (struct sockaddr *)(&recvAddr),
+              &recvAddrLen
+          );
+    if (len < 0)
+    {
+        LOG_ERROR("fail to receive IPC datagram\n");
+        perror( "recvfrom" );
+        return len;
+    }
+
+    LOG_3("<- %s\n", recvAddr.sun_path);
+    LOG_DUMP("IPC datagram recv", pData, len);
+
+    return len;
 }
 

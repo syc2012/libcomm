@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
     printf("[%s] \"%s\"\n", APP_NAME, argv[1]);
 
-    comm_ipcDgramSendTo(handle, IPC_DEST_FILE_PATH, (void *)argv[1], strlen(argv[1]));
+    comm_ipcDgramSend(handle, IPC_DEST_FILE_PATH, (void *)argv[1], strlen(argv[1]));
 
     comm_ipcDgramUninit( handle );
 

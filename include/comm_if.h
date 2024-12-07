@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 
 
-#define COMM_BUF_SIZE (4095)
+#define COMM_BUF_SIZE (8191)
 
 
 typedef enum
@@ -58,6 +58,11 @@ int  comm_udpIpv4Send(
          unsigned char  *pData,
          unsigned short  size
      );
+int  comm_udpIpv4Recv(
+         tUdpIpv4Handle  handle,
+         unsigned char  *pData,
+         unsigned short  size
+     );
 int  comm_udpIpv4GetAddr(char *pIfName, unsigned char *pIpv4Addr);
 
 tUdpIpv6Handle comm_udpIpv6Init(
@@ -70,6 +75,11 @@ int  comm_udpIpv6Send(
          tUdpIpv6Handle  handle,
          char           *pIpStr,
          unsigned short  portNum,
+         unsigned char  *pData,
+         unsigned short  size
+     );
+int  comm_udpIpv6Recv(
+         tUdpIpv6Handle  handle,
          unsigned char  *pData,
          unsigned short  size
      );
@@ -210,6 +220,11 @@ int  comm_rawSockSend(
          unsigned char  *pData,
          unsigned short  size
      );
+int  comm_rawSockRecv(
+         tRawHandle      handle,
+         unsigned char  *pData,
+         unsigned short  size
+     );
 int  comm_rawPromiscMode(tRawHandle handle, int enable);
 int  comm_rawGetMtu(tRawHandle handle);
 unsigned char *comm_rawGetHwAddr(tRawHandle handle);
@@ -259,9 +274,14 @@ tIpcDgramHandle comm_ipcDgramInit(
                     void            *pArg
                 );
 void comm_ipcDgramUninit(tIpcDgramHandle handle);
-int  comm_ipcDgramSendTo(
+int  comm_ipcDgramSend(
          tIpcDgramHandle  handle,
          char            *pFileName,
+         unsigned char   *pData,
+         unsigned short   size
+     );
+int  comm_ipcDgramRecv(
+         tIpcDgramHandle  handle,
          unsigned char   *pData,
          unsigned short   size
      );

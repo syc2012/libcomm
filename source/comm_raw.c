@@ -283,9 +283,9 @@ void comm_rawSockUninit(tRawHandle handle)
             comm_rawPromiscMode(handle, 0);
         }
         _rawUninit( pContext );
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("Raw socket un-initialized\n");
     }
 }
@@ -369,6 +369,74 @@ int comm_rawSockSend(
     }
 
     return error;
+}
+
+/**
+*  Receive data by a raw socket.
+*  @param [in]  handle  Raw socket handle.
+*  @param [in]  pData   A pointer of data buffer.
+*  @param [in]  size    Data buffer size.
+*  @returns  Message length (-1 is failed).
+*/
+int comm_rawSockRecv(
+    tRawHandle      handle,
+    unsigned char  *pData,
+    unsigned short  size
+)
+{
+    tRawContext *pContext = (tRawContext *)handle;
+    int len;
+
+
+    if (NULL == pContext)
+    {
+        LOG_ERROR("%s: pContext is NULL\n", __func__);
+        return -1;
+    }
+
+    if (pContext->fd < 0)
+    {
+        LOG_ERROR("%s: Raw socket is not ready\n", __func__);
+        return -1;
+    }
+
+    if ( pContext->pRecvFunc )
+    {
+        LOG_WARN("%s: pRecvFunc exists\n", __func__);
+        return -1;
+    }
+
+    if (NULL == pData)
+    {
+        LOG_WARN("%s: pData is NULL\n", __func__);
+        return -1;
+    }
+
+    if (0 == size)
+    {
+        LOG_WARN("%s: size is 0\n", __func__);
+        return -1;
+    }
+
+    len = recvfrom(
+              pContext->fd,
+              pData,
+              size,
+              0,
+              NULL,
+              NULL
+          );
+    if (len < 0)
+    {
+        LOG_ERROR("fail to receive raw socket\n");
+        perror( "recvfrom" );
+        return len;
+    }
+
+    LOG_3("<- Raw socket (%s)\n", pContext->ifName);
+    LOG_DUMP("Raw recv", pData, len);
+
+    return len;
 }
 
 /**

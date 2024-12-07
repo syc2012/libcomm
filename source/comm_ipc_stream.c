@@ -680,9 +680,9 @@ void comm_ipcStreamUninitServer(tIpcStreamServerHandle handle)
             _ipcStreamDisconnectClient(pContext, pContext->pUser[i]);
         }
         _ipcStreamUninitServer( pContext );
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("IPC stream server un-initialized\n");
     }
 }
@@ -702,8 +702,6 @@ static tIpcUser *_ipcStreamAcceptClient(
 {
     tIpcUser *pUser = NULL;
     pthread_attr_t tattr;
-    int bufSize = 0;
-    socklen_t bufSizeLen;
     int error;
     int i;
 
@@ -723,9 +721,6 @@ static tIpcUser *_ipcStreamAcceptClient(
             if ( pUser )
             {
                 LOG_3("IPC stream create client %s\n", pFileName);
-
-                bufSizeLen = sizeof( bufSize );
-                setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufSize, bufSizeLen);
 
                 memset(pUser, 0x00, sizeof( tIpcUser ));
                 pUser->pServer = pContext;

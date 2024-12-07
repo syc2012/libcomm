@@ -229,9 +229,9 @@ void comm_udpIpv4Uninit(tUdpIpv4Handle handle)
 
         pContext->running = 0;
         _udpIpv4UninitSocket( pContext );
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("IPv4 UDP un-initialized\n");
     }
 }
@@ -312,6 +312,84 @@ int comm_udpIpv4Send(
     }
 
     return error;
+}
+
+/**
+*  Receive message by the IPv4 UDP socket.
+*  @param [in]  handle  IPv4 UDP handle.
+*  @param [in]  pData   A pointer of data buffer.
+*  @param [in]  size    Data buffer size.
+*  @returns  Message length (-1 is failed).
+*/
+int comm_udpIpv4Recv(
+    tUdpIpv4Handle  handle,
+    unsigned char  *pData,
+    unsigned short  size
+)
+{
+    tUdpIpv4Context *pContext = (tUdpIpv4Context *)handle;
+    struct sockaddr_in recvAddr;
+    socklen_t recvAddrLen;
+    int len;
+
+
+    if (NULL == pContext)
+    {
+        LOG_ERROR("%s: pContext is NULL\n", __func__);
+        return -1;
+    }
+
+    if (pContext->fd < 0)
+    {
+        LOG_ERROR("%s: UDP socket is not ready\n", __func__);
+        return -1;
+    }
+
+    if ( pContext->pRecvFunc )
+    {
+        LOG_WARN("%s: pRecvFunc exists\n", __func__);
+        return -1;
+    }
+
+    if (NULL == pData)
+    {
+        LOG_WARN("%s: pData is NULL\n", __func__);
+        return -1;
+    }
+
+    if (0 == size)
+    {
+        LOG_WARN("%s: size is 0\n", __func__);
+        return -1;
+    }
+
+    /* source address */
+    recvAddrLen = sizeof( struct sockaddr_in );
+    bzero(&recvAddr, recvAddrLen);
+
+    len = recvfrom(
+              pContext->fd,
+              pData,
+              size,
+              0,
+              (struct sockaddr *)(&recvAddr),
+              &recvAddrLen
+          );
+    if (len <= 0)
+    {
+        LOG_ERROR("fail to receive IPv4 UDP socket\n");
+        perror( "recvfrom" );
+        return len;
+    }
+
+    LOG_3(
+        "<- %s:%d\n",
+        inet_ntoa( recvAddr.sin_addr ),
+        ntohs( recvAddr.sin_port )
+    );
+    LOG_DUMP("IPv4 UDP recv", pData, len);
+
+    return len;
 }
 
 /**
@@ -603,9 +681,9 @@ void comm_udpIpv6Uninit(tUdpIpv6Handle handle)
 
         pContext->running = 0;
         _udpIpv6UninitSocket( pContext );
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("IPv6 UDP un-initialized\n");
     }
 }
@@ -620,14 +698,14 @@ void comm_udpIpv6Uninit(tUdpIpv6Handle handle)
 *  @returns  Message length (-1 is failed).
 */
 int comm_udpIpv6Send(
-    tUdpIpv4Handle  handle,
+    tUdpIpv6Handle  handle,
     char           *pIpStr,
     unsigned short  portNum,
     unsigned char  *pData,
     unsigned short  size
 )
 {
-    tUdpIpv4Context *pContext = (tUdpIpv4Context *)handle;
+    tUdpIpv6Context *pContext = (tUdpIpv6Context *)handle;
     struct sockaddr_in6 sendAddr;
     int sendAddrLen;
     int error;
@@ -686,6 +764,92 @@ int comm_udpIpv6Send(
     }
 
     return error;
+}
+
+/**
+*  Receive message by the IPv6 UDP socket.
+*  @param [in]  handle  IPv6 UDP handle.
+*  @param [in]  pData   A pointer of data buffer.
+*  @param [in]  size    Data buffer size.
+*  @returns  Message length (-1 is failed).
+*/
+int comm_udpIpv6Recv(
+    tUdpIpv6Handle  handle,
+    unsigned char  *pData,
+    unsigned short  size
+)
+{
+    tUdpIpv6Context *pContext = (tUdpIpv6Context *)handle;
+    char ipv6Str[INET6_ADDRSTRLEN];
+    struct sockaddr_in6 recvAddr;
+    socklen_t recvAddrLen;
+    int len;
+
+
+    if (NULL == pContext)
+    {
+        LOG_ERROR("%s: pContext is NULL\n", __func__);
+        return -1;
+    }
+
+    if (pContext->fd < 0)
+    {
+        LOG_ERROR("%s: UDP socket is not ready\n", __func__);
+        return -1;
+    }
+
+    if ( pContext->pRecvFunc )
+    {
+        LOG_WARN("%s: pRecvFunc exists\n", __func__);
+        return -1;
+    }
+
+    if (NULL == pData)
+    {
+        LOG_WARN("%s: pData is NULL\n", __func__);
+        return -1;
+    }
+
+    if (0 == size)
+    {
+        LOG_WARN("%s: size is 0\n", __func__);
+        return -1;
+    }
+
+    /* source address */
+    recvAddrLen = sizeof( struct sockaddr_in6 );
+    bzero(&recvAddr, recvAddrLen);
+
+    len = recvfrom(
+              pContext->fd,
+              pData,
+              size,
+              0,
+              (struct sockaddr *)(&recvAddr),
+              &recvAddrLen
+          );
+    if (len <= 0)
+    {
+        LOG_ERROR("fail to receive IPv6 UDP socket\n");
+        perror( "recvfrom" );
+        return len;
+    }
+
+    inet_ntop(
+        AF_INET6,
+        &(recvAddr.sin6_addr),
+        ipv6Str,
+        INET6_ADDRSTRLEN
+    );
+
+    LOG_3(
+        "<- %s:%d\n",
+        ipv6Str,
+        ntohs( recvAddr.sin6_port )
+    );
+    LOG_DUMP("IPv6 UDP recv", pData, len);
+
+    return len;
 }
 
 

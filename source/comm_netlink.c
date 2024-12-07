@@ -319,9 +319,9 @@ void comm_netlinkUninit(tNetlinkHandle handle)
 
         pContext->running = 0;
         _netlinkUninit( pContext );
-        free( pContext );
 
         pthread_join(pContext->thread, NULL);
+        free( pContext );
         LOG_1("netlink un-initialized\n");
     }
 }
