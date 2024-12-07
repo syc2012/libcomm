@@ -225,12 +225,19 @@ void comm_udpIpv4Uninit(tUdpIpv4Handle handle)
 
     if ( pContext )
     {
-        pthread_cancel( pContext->thread );
+        if ( pContext->pRecvFunc )
+        {
+            pthread_cancel( pContext->thread );
+        }
 
         pContext->running = 0;
         _udpIpv4UninitSocket( pContext );
 
-        pthread_join(pContext->thread, NULL);
+        if ( pContext->pRecvFunc )
+        {
+            pthread_join(pContext->thread, NULL);
+        }
+
         free( pContext );
         LOG_1("IPv4 UDP un-initialized\n");
     }
@@ -677,12 +684,19 @@ void comm_udpIpv6Uninit(tUdpIpv6Handle handle)
 
     if ( pContext )
     {
-        pthread_cancel( pContext->thread );
+        if ( pContext->pRecvFunc )
+        {
+            pthread_cancel( pContext->thread );
+        }
 
         pContext->running = 0;
         _udpIpv6UninitSocket( pContext );
 
-        pthread_join(pContext->thread, NULL);
+        if ( pContext->pRecvFunc )
+        {
+            pthread_join(pContext->thread, NULL);
+        }
+
         free( pContext );
         LOG_1("IPv6 UDP un-initialized\n");
     }

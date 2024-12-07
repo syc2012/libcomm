@@ -275,7 +275,10 @@ void comm_rawSockUninit(tRawHandle handle)
 
     if ( pContext )
     {
-        pthread_cancel( pContext->thread );
+        if ( pContext->pRecvFunc )
+        {
+            pthread_cancel( pContext->thread );
+        }
 
         pContext->running = 0;
         if ( pContext->promisc )
@@ -284,7 +287,11 @@ void comm_rawSockUninit(tRawHandle handle)
         }
         _rawUninit( pContext );
 
-        pthread_join(pContext->thread, NULL);
+        if ( pContext->pRecvFunc )
+        {
+            pthread_join(pContext->thread, NULL);
+        }
+
         free( pContext );
         LOG_1("Raw socket un-initialized\n");
     }

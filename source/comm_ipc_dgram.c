@@ -220,12 +220,19 @@ void comm_ipcDgramUninit(tIpcDgramHandle handle)
 
     if ( pContext )
     {
-        pthread_cancel( pContext->thread );
+        if ( pContext->pRecvFunc )
+        {
+            pthread_cancel( pContext->thread );
+        }
 
         pContext->running = 0;
         _ipcDgramUninit( pContext );
 
-        pthread_join(pContext->thread, NULL);
+        if ( pContext->pRecvFunc )
+        {
+            pthread_join(pContext->thread, NULL);
+        }
+
         free( pContext );
         LOG_1("IPC datagram un-initialized\n");
     }
